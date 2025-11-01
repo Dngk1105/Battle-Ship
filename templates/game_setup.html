@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Đặt tàu cho trận #{{ game.id }}</h2>
+<p>Người chơi: {{ player_name }}</p>
+
+<div>
+  <label>Chọn tàu:</label>
+  <select id="shipSelect">
+    {% for ship in ships %}
+      <option value="{{ ship }}">{{ ship }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Hướng:</label>
+  <select id="orientationSelect">
+    <option value="H">Ngang</option>
+    <option value="V">Dọc</option>
+  </select>
+
+  <button id="readyBtn" disabled>Sẵn sàng</button>
+</div>
+
+<hr>
+<h3>Bảng của bạn:</h3>
+<table id="board"></table>
+
+<button id="randomBtn">Chọn ngẫu nhiên</button>
+<p id="status"></p>
+
+<!-- Tránh báo lỗi  -->
+<script>
+  const totalShips = Number("{{ ships|length }}");
+</script>
+
+
+
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const socket = io();
+const gameId = "{{ game.id }}";
+const playerName = "{{ player_name }}";
+
+socket.emit("join_room", { room: gameId });
+
+const size = 10;
+const boardEl = document.getElementById("board");
+const placedShips = new Set();
+
+// Tạo bảng HTML
+for (let i = 0; i < size; i++) {
+  const row = document.createElement("tr");
+  for (let j = 0; j < size; j++) {
+    const cell = document.createElement("td");
+    cell.dataset.x = i;
+    cell.dataset.y = j;
+    cell.style.width = "30px";
+    cell.style.height = "30px";
+    cell.style.border = "1px solid black";
+    cell.style.textAlign = "center";
+    cell.style.cursor = "pointer";
+    cell.addEventListener("click", () => placeShip(i, j));
+    row.appendChild(cell);
+  }
+  boardEl.appendChild(row);
+}
+
+function placeShip(x, y) {
+  const ship = document.getElementById("shipSelect").value;
+  const orientation = document.getElementById("orientationSelect").value;
+
+  if (placedShips.has(ship)) {
+    document.getElementById("status").textContent = `${ship} đã được đặt rồi!`;
+    return;
+  }
+
+  socket.emit("place_ship", {
+    game_id: gameId,
+    ship_name: ship,
+    x: x,
+    y: y,
+    orientation: orientation,
+    owner: playerName
+  });
+}
+
+socket.on("ship_placed_self", (data) => {
+  const { x, y, orientation, ship_name, positions } = data;
+  document.getElementById("status").textContent = `Đặt ${ship_name} thành công!`;
+  placedShips.add(ship_name)
+
+  document.querySelector(`[data-x="${x}"][data-y="${y}"]`).style.background = "lightblue";
+  positions.forEach(([x, y]) => {
+        const cell = document.querySelector(`[data-x="${x}"][data-y="${y}"]`).style.background = "lightblue";
+  })
+
+  const option = document.querySelector(`#shipSelect option[value="${ship_name}"]`);
+  if (option) option.disabled = true;
+
+  if (placedShips.size === totalShips) {
+    document.getElementById("readyBtn").disabled = false;
+    document.getElementById("status").textContent = "Tất cả tàu đã được đặt. Bạn có thể sẵn sàng!";
+  }
+});
+
+socket.on("auto_ship_placed_self", (data) => {
+  board = data["board"];
+  board = JSON.parse(board);
+  for (let x = 0; x < board.length; x++)
+    for (let y = 0; y < board[x].length; y++)
+      if (board[x][y] !== 0){
+        document.querySelector(`[data-x="${x}"][data-y="${y}"]`).style.background = "lightblue";
+      }
+})
+
+socket.on("opponent_progress", (data) => {
+  document.getElementById("status").textContent = data.message;
+});
+
+socket.on("both_ready", (data) => {
+  window.location.href = `/game_battle/${data.game_id}`;
+});
+
+socket.on("error", (data) => {
+    document.getElementById("status").textContent = data.message;
+})
+
+
+document.getElementById("readyBtn").addEventListener("click", () => {
+  socket.emit("player_ready", { game_id: gameId, player: playerName });
+  document.getElementById("readyBtn").disabled = true;
+  document.getElementById("status").textContent = "Bạn đã sẵn sàng!";
+});
+
+document.getElementById("randomBtn").addEventListener("click", () => {
+  socket.emit("auto_place_ship", {game_id: gameId, player: playerName})
+  socket.emit("player_ready", { game_id: gameId, player: playerName });
+  document.getElementById("readyBtn").disabled = true;
+  document.getElementById("status").textContent = "Đặt tàu ngẫu nhiên thành công, Bạn đã sẵn sàng!";
+});
+</script>
+
+{% endblock %}

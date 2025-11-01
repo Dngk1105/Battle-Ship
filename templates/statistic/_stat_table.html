@@ -1,0 +1,29 @@
+{% if matrix %}
+  <table border="1" cellspacing="0" cellpadding="4">
+    {% for row in matrix %}
+      <tr>
+        {% for cell in row %}
+          {% if heatmap %}
+            <td data-alpha="{{ cell }}">
+              {{ (cell * 100) | round(1) }}%
+            </td>
+          {% else %}
+            {% if cell == 0 %}  
+              <td> 0 </td>
+            {% elif cell == 1 %}
+              <td> 1 </td>
+            {% elif cell == 2 %}
+              <td> x </td>
+            {% elif cell == 3 %}
+              <td> ~ </td>
+            {% elif cell == 4 %}
+              <td> . </td>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p>Chưa có dữ liệu hiển thị.</p>
+{% endif %}

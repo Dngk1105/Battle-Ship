@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Thông số Player: {{ player.playername }}</h1>
+    <hr>
+    {% include 'statistic/player_statistic.html' %}
+    
+    <h3>Lịch sử đấu</h3>
+      {% if player.matches %}
+      <table border="1">
+        <tr>
+          <th>Đối thủ</th>
+          <th>Kết quả</th>
+          <th>Ngày</th>
+          <th>Chi Tiết</th>
+        </tr>
+        {% for match in player.matches %}
+        <tr>
+          <td>{{ match.opponent }}</td>
+          <td>
+            {% if match.result == 'win' %}
+              Thắng
+            {% else %}
+              Thua
+            {% endif %}
+          </td>
+          <td>{{ match.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p>Chưa có trận đấu nào được ghi nhận.</p>
+      {% endif %}
+    </div>
+    
+    
+    
+    <script>
+    document.querySelectorAll('td[data-alpha]').forEach(td => {
+      const a = parseFloat(td.dataset.alpha);
+      td.style.backgroundColor = `rgba(255, 0, 0, ${a})`;
+    });
+    </script>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Trận chiến #{{ game.id }}</h2>
+<p>Người chơi: {{ player_name }} vs {{ opponent_name }}</p>
+
+<div style="display:flex;gap:50px;">
+  <div>
+    <h3>Bảng của bạn</h3>
+    <table id="playerBoard"></table>
+  </div>
+  <div>
+    <h3>Bảng của {{ opponent_name }}</h3>
+    <table id="opponentBoard"></table>
+  </div>
+</div>
+
+<p id="status"></p>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const socket = io();
+const gameId = "{{ game.id }}";
+const playerName = "{{ player_name }}";
+const isHost = "{{ is_host }}".toLowerCase() === "true";
+const opponentName = "{{ opponent_name }}";
+let currentTurn = "{{ game.current_turn }}";
+
+socket.emit("join_room", { room: gameId });
+
+const playerBoardData = JSON.parse(`{{ player_board|safe }}`);  // safe ở đây liên quan đến bảo mật, jinja sẽ không bỏ qua mã html
+const opponentBoardData = JSON.parse(`{{ opponent_board|safe }}`);
+
+const size = 10;
+const playerBoard = document.getElementById("playerBoard");
+const opponentBoard = document.getElementById("opponentBoard");
+
+function makeBoard(table, data, hideShips=false, isOpponent=false) {
+  table.innerHTML = "";
+  for (let i = 0; i < size; i++) {
+    const row = document.createElement("tr");
+    for (let j = 0; j < size; j++) {
+      const cell = document.createElement("td");
+      cell.dataset.x = i;
+      cell.dataset.y = j;
+      cell.style.width = "30px";
+      cell.style.height = "30px";
+      cell.style.border = "1px solid black";
+      cell.style.textAlign = "center";
+      const val = data ? data[i][j] : 0;
+
+      // nếu là bảng của mình → luôn thấy tàu
+      // nếu là bảng đối thủ → ẩn tàu (val==1) thành trắng
+      if (val === 1 && !hideShips) cell.style.background = "lightblue";
+      else if (val === 2) cell.style.background = "tomato";     // hit
+      else if (val === 3) cell.style.background = "lightgray";    // miss
+      else if (val === 4) cell.style.background = "crimson";   // sunk
+
+      if (isOpponent) {
+        cell.style.cursor = "pointer";
+        cell.addEventListener("click", () => fireAt(i, j));
+      }
+
+      row.appendChild(cell);
+    }
+    table.appendChild(row);
+  }
+}
+
+makeBoard(playerBoard, playerBoardData, false, false);
+makeBoard(opponentBoard, opponentBoardData, true, true);
+
+// Vô hiệu hóa chọn bảng đối thủ nếu chưa tới lượt
+function disableOpponentBoard(disabled) {
+  // Nếu không truyền giá trị vào, mặc định là true
+  if (disabled === undefined) {
+    disabled = true;
+  }
+
+  const cells = opponentBoard.querySelectorAll("td");
+
+  // Duyệt qua từng ô (một cách cổ điển)
+  for (let i = 0; i < cells.length; i++) {
+    const td = cells[i];
+
+    // Nếu disabled = true → cấm bắn
+    if (disabled === true) {
+      td.style.cursor = "not-allowed"; // đổi hình chuột
+      td.style.opacity = "0.6";        // làm mờ đi
+    } else {
+      // Ngược lại → cho phép bắn
+      td.style.cursor = "pointer";
+      td.style.opacity = "1";
+    }
+  }
+}
+
+
+function fireAt(x, y) {
+    if (currentTurn !== playerName) {
+      document.getElementById("status").textContent = "Chưa đến lượt bạn!";
+      return;
+    }
+
+    const cell = opponentBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    if (!cell || cell.classList.contains("fired")) return;
+
+    // tạm khóa click trong khi chờ server phản hồi
+    disableOpponentBoard(true);
+    cell.classList.add("fired");
+    cell.style.cursor = "not-allowed";
+    document.getElementById("status").textContent = "Đang bắn";
+
+    socket.emit("player_fire", { game_id: gameId, player: playerName, x, y });
+}
+
+// Nhận kết quả bắn
+socket.on("shot_result", (data) => {
+    const { x, y, result, attacker, target, winner } = data;
+
+    // Nếu server gửi attacker/target, xác định bản đồ cần cập nhật:
+    // - Nếu tôi là target -> update playerBoard
+    // - Nếu tôi là attacker -> update opponentBoard
+    const table = (playerName === target) ? playerBoard : opponentBoard;
+    const cell = table.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    const color =
+      result === "hit" ? "tomato" :
+      result === "sunk" ? "crimson" :
+      result === "miss" ? "lightgray" : "white";
+    if (cell) cell.style.background = color;
+
+  // Winner handling
+  if (winner) {
+      const msg = (winner === playerName)
+        ? "Bạn đã chiến thắng!"
+        : "Bạn đã thua!";
+      document.getElementById("status").textContent = msg;
+      disableOpponentBoard(true);
+      return;
+  }
+
+  // Thông báo trạng thái (tùy theo là attacker hay target)
+  if (playerName === attacker) {
+      if (result === "hit") document.getElementById("status").textContent = "Bắn trúng!";
+      else if (result === "sunk") document.getElementById("status").textContent = "Đánh chìm!";
+      else if (result === "miss") document.getElementById("status").textContent = "Trượt rồi!";
+    } else {
+      if (result === "hit") document.getElementById("status").textContent = "Địch bắn trúng bạn!";
+      else if (result === "miss") document.getElementById("status").textContent = "Địch bắn hụt!";
+      else if (result === "sunk") document.getElementById("status").textContent = "Địch đánh chìm tàu bạn!";
+    }
+});
+
+//tàu chìm thì tô lại các ô trong comp
+socket.on("ship_sunked", (data) => {
+  const { owner, ship_name, comp } = data;
+  const table = (playerName === owner) ? playerBoard : opponentBoard;
+  comp.forEach( ([x,y]) => {
+        const cell = table.querySelector(`[data-x="${x}"][data-y="${y}"]`).style.background = "crimson";
+  })
+})
+
+// Khi game kết thúc (có người thắng)
+socket.on("game_over", (data) => {
+    const { winner, redirect_url } = data;
+    const msg = (winner === playerName)
+      ? "Bạn đã chiến thắng! Đang chuyển hướng..."
+      : "Bạn đã thua... Đang quay lại chi tiết trận đấu.";
+    
+    document.getElementById("status").textContent = msg;
+
+    // Khóa bảng bắn
+    disableOpponentBoard(true);
+
+    // Chờ 2 giây rồi chuyển hướng
+    setTimeout(() => {
+      window.location.href = redirect_url;
+    }, 2000);
+});
+
+// Nhận thông báo đổi lượt
+socket.on("turn_change", (data) => {
+    currentTurn = data.current_turn;
+    if (currentTurn === playerName) {
+      document.getElementById("status").textContent = "Đến lượt bạn!";
+      disableOpponentBoard(false);
+    } else {
+      document.getElementById("status").textContent = "Đợi lượt của đối thủ...";
+      disableOpponentBoard(true);
+    }
+});
+</script>
+{% endblock %}

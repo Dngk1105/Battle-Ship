@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div>
+        <h2>Game: {{ host_name }} - {{ guest_name }}</h2>
+        <br>
+        <p>Game id: {{ game.id }}</p>
+        <p>Chủ trận (Host): {{ host_name }}</p>
+        <p>Thời gian: {{ game.timestamp.strftime('%d-%m-%Y %H:%M') }}</p>
+        <p>Trạng thái: {{ game.status }}</p>
+        
+        <hr>
+
+        <h3>Kết quả</h3>
+        <p>Người thắng: {{game.winner}}</p>
+        <p>Kết thúc sau: {{game.player_shots + game.opponent_shots}} lượt bắn</p>
+        <p>Chủ phòng bắn {{game.player_shots}} lượt, Đối thủ bắn {{game.opponent_shots}} lượt. </p>
+        <hr>
+
+        <h4>Tàu đã chìm</h4>
+        <ul>
+            <li><strong>{{ host_name }}</strong>: 
+                {% if player_sunked %}
+                {{ player_sunked | join(', ') }}
+                {% else %}
+                Không có tàu nào bị chìm
+                {% endif %}
+            </li>
+            <li><strong>{{ guest_name }}</strong>: 
+                {% if opponent_sunked %}
+                {{ opponent_sunked | join(', ') }}
+                {% else %}
+                Không có tàu nào bị chìm
+                {% endif %}
+            </li>
+        </ul>
+
+        <h4>Tàu còn sống</h4>
+        <ul>
+            <li><strong>{{ host_name }}</strong>: 
+                {% if player_alive %}
+                {{ player_alive | join(', ') }}
+                {% else %}
+                Không còn tàu nào sống
+                {% endif %}
+            </li>
+            <li><strong>{{ guest_name }}</strong>: 
+                {% if opponent_alive %}
+                {{ opponent_alive | join(', ') }}
+                {% else %}
+                Không còn tàu nào sống
+                {% endif %}
+            </li>
+        </ul>
+
+        <hr>
+
+        <h3>Ma trận</h3>
+        <h4>{{ host_name }}</h4>
+            {% set matrix = player_grid %}
+            {% set heatmap = False %}
+            {% include 'statistic/_stat_table.html' with context %}
+
+        <h4>{{ guest_name }}</h4>
+            {% set matrix = opponent_grid %}
+            {% set heatmap = False %}
+            {% include 'statistic/_stat_table.html' with context %}
+    </div>
+{% endblock %}
