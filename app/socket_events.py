@@ -4,7 +4,7 @@ from flask import request, current_app, url_for
 from flask_login import current_user
 from app.models import Game
 from app.game_logic.base_logic import GameLogic
-from app.game_logic.ai_logic import get_ai_instance
+from app.ai.factory import get_ai_instance
 
 import threading
 import time
@@ -186,7 +186,7 @@ def handle_fire(data):
 @socketio.on("ai_make_shot")
 def handle_ai_make_shot(data):
     from app.models import Game
-    from app.game_logic.ai_logic import get_ai_instance
+    from app.ai.factory import get_ai_instance
     from app.socket_helpers import process_shot_result
     from app import db, socketio
 

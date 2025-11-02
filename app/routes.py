@@ -8,8 +8,7 @@ import sqlalchemy as sa
 from flask_login import current_user, login_user, logout_user, login_required
 import json
 from app.game_logic.base_logic import GameLogic
-from app.game_logic.ai_logic import TestAI
-from app.game_logic.ai_logic import get_ai_instance
+from app.ai.factory import get_ai_instance
 
 
 
