@@ -27,3 +27,18 @@
 {% else %}
   <p>Chưa có dữ liệu hiển thị.</p>
 {% endif %}
+
+
+
+{# Hiện màu đẹp hơn, nhưng đừng hỏi làm thế nào #}
+<script>
+const alphas = Array.from(document.querySelectorAll('td[data-alpha]')).map(td => parseFloat(td.dataset.alpha));
+const minA = Math.min(...alphas);
+const maxA = Math.max(...alphas);
+
+document.querySelectorAll('td[data-alpha]').forEach(td => {
+  let a = parseFloat(td.dataset.alpha);
+  a = (a - minA) / (maxA - minA); // chuẩn hóa 0-1
+  td.style.backgroundColor = `rgba(255, 0, 0, ${a})`;
+});
+</script>

@@ -17,7 +17,10 @@ from app.game_logic.ai_logic import get_ai_instance
 @app.route('/index')
 @login_required
 def index() : 
-    return render_template('index.html', title = 'Trang chủ')
+    from app.queries import overall, overall_probability_matrix
+    overall_data = overall()
+    prob_matrix = overall_probability_matrix()
+    return render_template('index.html', title = 'Trang chủ', overall_data = overall_data, prob_matrix = prob_matrix)
 
 @app.route('/entername', methods = ['GET', 'POST'])
 def entername():

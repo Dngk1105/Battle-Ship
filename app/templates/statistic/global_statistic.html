@@ -1,0 +1,24 @@
+{% block content %}
+<div>
+  <h3>Tổng quan hệ thống</h2>
+    <ul>
+        <li>Tổng số người chơi: {{ overall_data.total_players }}</li>
+        <li>Tổng số game: {{ overall_data.total_games }}</li>
+        <li>Người vs Người: {{ overall_data.human_vs_human }}</li>
+        <li>Người vs AI: {{ overall_data.human_vs_ai }}</li>
+        <li>Tỉ lệ thắng người vs AI: {{ overall_data.human_win_rate_vs_ai }}%</li>
+        <li>Trung bình số phát bắn: {{ overall_data.avg_total_shots }}</li>
+    </ul> 
+
+
+  <h3>Phổ xác suất đặt tàu</h3>
+  {% if prob_matrix %}
+
+    {% set matrix = prob_matrix %}
+    {% set heatmap = True %}
+    {% include 'statistic/_stat_table.html' with context %}
+  
+  {% else %}
+  <p>Chưa có dữ liệu phổ xác suất.</p>
+  {% endif %}
+{% endblock %}

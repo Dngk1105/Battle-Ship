@@ -25,6 +25,9 @@
             {% endif %}
           </td>
           <td>{{ match.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
+          <td>
+               <a href="{{ url_for('game_detail', game_id=match.game_id) }}">Xem</a>
+          </td> 
         </tr>
         {% endfor %}
       </table>
@@ -33,12 +36,4 @@
       {% endif %}
     </div>
     
-    
-    
-    <script>
-    document.querySelectorAll('td[data-alpha]').forEach(td => {
-      const a = parseFloat(td.dataset.alpha);
-      td.style.backgroundColor = `rgba(255, 0, 0, ${a})`;
-    });
-    </script>
 {% endblock %}

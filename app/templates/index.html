@@ -2,4 +2,7 @@
 
 {% block content %}
     <h1>Hi, {{ current_user.playername }} !</h1>
+    <hr>
+    {% include 'statistic/global_statistic.html' %}
+
 {% endblock %}

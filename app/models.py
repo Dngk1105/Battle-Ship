@@ -37,7 +37,8 @@ class Player(UserMixin, db.Model):
         for grid_json in placements:
             grid = json.loads(grid_json)
             grid_np = numpy.array(grid, dtype=float)
-            grid_np = (grid_np != 0).astype(float)  # chuyển ô != 0 thành 1 h
+            # Chỉ giữ lại ô có tàu (1 hoặc 2), bỏ qua ô 0 và ô miss (3)
+            grid_np = numpy.where((grid_np == 1) | (grid_np == 2) | (grid_np == 4), 1.0, 0.0)
             
             if maxtrix_sum is None:
                 maxtrix_sum = grid_np
@@ -88,6 +89,7 @@ class Player(UserMixin, db.Model):
                 result = "win" if g.winner == self.playername else "lose"
 
             matches_data.append({
+                "game_id" : g.id,
                 "opponent": opponent,
                 "result": result,
                 "timestamp": g.timestamp
