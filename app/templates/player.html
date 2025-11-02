@@ -36,12 +36,4 @@
       {% endif %}
     </div>
     
-    
-    
-    <script>
-    document.querySelectorAll('td[data-alpha]').forEach(td => {
-      const a = parseFloat(td.dataset.alpha);
-      td.style.backgroundColor = `rgba(255, 0, 0, ${a})`;
-    });
-    </script>
 {% endblock %}
