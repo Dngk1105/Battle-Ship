@@ -25,6 +25,9 @@
             {% endif %}
           </td>
           <td>{{ match.timestamp.strftime('%d-%m-%Y %H:%M') }}</td>
+          <td>
+               <a href="{{ url_for('game_detail', game_id=match.game_id) }}">Xem</a>
+          </td> 
         </tr>
         {% endfor %}
       </table>
