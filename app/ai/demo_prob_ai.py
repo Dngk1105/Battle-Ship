@@ -20,7 +20,7 @@ class DemoProbAI(BaseAI):
         #Lấy bảng thông tin của đối thủ
         board = self.get_board(target_name)
         if not board:
-            print(f"[ERROR] Không tìm thấy bảng của {target_name}")
+            self.log_action(f"Không tìm thấy bảng của {target_name}")
             return {"result": "invalid", "x": -1, "y": -1}
         
         #Tìm ô có xác xuất cao nhất trong phổ xác xuất
@@ -35,8 +35,10 @@ class DemoProbAI(BaseAI):
                     best_val = self.prob_matrix[x][y]
                     best_x, best_y = x, y
 
-        #Tạo phát bắn
         x, y = best_x, best_y 
+        self.log_action(f"Chọn ô ({x},{y}) có xác suất {best_val:.2f}")
+        
+        #Tạo phát bắn
         result_data = self.shoot(attacker_name, target_name, x, y)
         result_data.update({"x": x, "y": y})
         print(f"[DEBUG] {self.name} bắn vào ({x}, {y}) của {target_name}")
@@ -45,13 +47,21 @@ class DemoProbAI(BaseAI):
         #Xử lí sau khi bắn 
         self.prob_matrix[x][y] = 0  #đã bắn
         if result_data['result'] == 'miss':
+            self.log_action(f"Bắn hụt tại ({x},{y})")
             self.miss_update(x, y)
         elif result_data['result'] == 'hit':
+            self.log_action(f"Bắn trúng tại ({x},{y})")
             self.hit_update(x, y)
         elif result_data['result'] == 'sunk':
+            self.log_action(f"Đánh chìm tàu tại ({x},{y})")
             self.hit_update(x, y)
         
+        #Mục đích để hiển thị trước khi emit log thôi
+        max_val = max(max(row) for row in self.prob_matrix) or 1
+        normalized = [[cell / max_val for cell in row] for row in self.prob_matrix]
         
+        self.log_action(f"Cập nhật lại prob_matrix", 
+                        prob_matrix = normalized)   #nhớ tolist() để json hóa được
         return result_data
 
         

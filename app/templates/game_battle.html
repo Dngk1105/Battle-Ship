@@ -8,9 +8,18 @@
     <h3>Bảng của bạn</h3>
     <table id="playerBoard"></table>
   </div>
+
   <div>
     <h3>Bảng của {{ opponent_name }}</h3>
     <table id="opponentBoard"></table>
+  </div>
+
+  <div id="aiPanel" style="min-width:300px;">
+    <h3> Hoạt động của AI</h3>
+    <div id="aiLogs" style="height:200px;overflow-y:auto;border:1px solid gray;padding:5px;background:#fafafa;"></div>
+    
+    <h4 id="aiBoardTitle"></h4>
+    <div id="aiBoard"></div>
   </div>
 </div>
 
@@ -185,5 +194,35 @@ socket.on("turn_change", (data) => {
       }
     }
 });
+
+socket.on("ai_log_update", (data) => {
+  console.log("prob_matrix:", data.prob_matrix);
+  //Cập nhật log
+  logBox = document.getElementById("aiLogs");
+  p = document.createElement("p");
+  p.textContent = `${data.ai_name}: ${data.message}`;
+  logBox.appendChild(p);
+  logBox.scrollTop = logBox.scrollHeight; //Cuộn xuống dòng
+
+  // Cập nhật thêm (nếu có)
+  if (data.ai_name == "DemoProbAI"){
+    if (data.prob_matrix){
+      fetch("/render_matrix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matrix: data.prob_matrix,
+          heatmap: true
+        })
+      })
+      .then(res => res.text())  //chuyển phản hồi (response body) thành text HTML
+      .then(html =>{
+        document.getElementById("aiBoardTitle").textContent = `${data.ai_name}'s Board`;
+        document.getElementById("aiBoard").innerHTML = html;
+      })  // Chèn thẳng text html vào trang
+    }
+  }
+});
 </script>
 {% endblock %}
+

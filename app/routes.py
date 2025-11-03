@@ -356,3 +356,11 @@ def game_battle(game_id):
         opponent_board=json.dumps(opponent_board),
         is_host=is_host
     )
+    
+    
+@app.route("/render_matrix", methods=["POST"])
+def render_matrix():
+    data = request.get_json()
+    matrix = data.get("matrix")
+    heatmap = data.get("heatmap", False)
+    return render_template("statistic/_stat_table.html", matrix=matrix, heatmap=heatmap)
