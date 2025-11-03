@@ -219,6 +219,12 @@ socket.on("ai_log_update", (data) => {
       .then(html =>{
         document.getElementById("aiBoardTitle").textContent = `${data.ai_name}'s Board`;
         document.getElementById("aiBoard").innerHTML = html;
+
+        const tdList = document.querySelectorAll('#aiBoard td[data-alpha]');
+        tdList.forEach(td => {
+          const val = parseFloat(td.dataset.alpha);
+          td.textContent = val;
+        })
       })  // Chèn thẳng text html vào trang
     }
   }

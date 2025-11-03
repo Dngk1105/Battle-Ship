@@ -10,8 +10,9 @@ class DemoProbAI(BaseAI):
     """
     def __init__(self, game, name=None):
         super().__init__(game, name)
-        self.prob_matrix = self.gen_prob_matrix()
-        
+        self.prob_matrix = self.gen_prob_matrix() 
+
+    
     def place_ships(self):
         #Đặt tàu ngẫu nhiên
         self.auto_place_ships(self.name)
@@ -56,12 +57,9 @@ class DemoProbAI(BaseAI):
             self.log_action(f"Đánh chìm tàu tại ({x},{y})")
             self.hit_update(x, y)
         
-        #Mục đích để hiển thị trước khi emit log thôi
-        max_val = max(max(row) for row in self.prob_matrix) or 1
-        normalized = [[cell / max_val for cell in row] for row in self.prob_matrix]
         
         self.log_action(f"Cập nhật lại prob_matrix", 
-                        prob_matrix = normalized)   #nhớ tolist() để json hóa được
+                        prob_matrix = self.prob_matrix.tolist())   #nhớ tolist() để json hóa được
         return result_data
 
         
@@ -97,8 +95,8 @@ class DemoProbAI(BaseAI):
                         
     def miss_update(self, x, y):
         # Giảm nhẹ xác suất vùng lân cận
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
+        for dx in [-1, 0, 1, -2, 2]:
+            for dy in [-1, 0, 1, -2, 2]:
                 nx, ny = x + dx, y + dy
                 if self.in_bounds(nx, ny):
                     self.prob_matrix[nx][ny] *= 0.8  # giảm 20%
