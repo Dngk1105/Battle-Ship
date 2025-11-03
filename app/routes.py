@@ -303,7 +303,7 @@ def game_setup(game_id):
     # Nếu là AI đối thủ → tự động đặt tàu và sẵn sàng
     if game.ai and not logic.get_board(game.ai.name):
         ai = get_ai_instance(game)
-        ai.auto_place_ships(game.ai.name)
+        ai.place_ships()
         game.ai_ready = True
         db.session.commit()
 
