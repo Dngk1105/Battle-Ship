@@ -227,7 +227,7 @@ class GameLogic:
         elif cell == 1:
             board[x][y] = 2
             print(f"[DEBUG] Bắn trúng tàu tại ({x},{y})")
-            ship_name, comp = self._get_ship_component(board, target_name, x, y)
+            ship_name, comp = self._get_ship_component(target_name, x, y)
             print(f"[DEBUG] Component tàu {ship_name} gồm {len(comp)} ô: {comp}")
             
             if comp and self._is_component_sunk(comp, board):
@@ -321,7 +321,7 @@ class GameLogic:
 
     # --------------------------- Không phải hàm chính ---------------------------
     
-    def _get_ship_component(self, board, target_name, x, y):
+    def _get_ship_component(self, target_name, x, y):
         placement = db.session.scalar(
             db.select(ShipPlacement)
             .where(ShipPlacement.game_id == self.game.id)

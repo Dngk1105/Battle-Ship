@@ -303,7 +303,7 @@ def game_setup(game_id):
     # Nếu là AI đối thủ → tự động đặt tàu và sẵn sàng
     if game.ai and not logic.get_board(game.ai.name):
         ai = get_ai_instance(game)
-        ai.auto_place_ships(game.ai.name)
+        ai.place_ships()
         game.ai_ready = True
         db.session.commit()
 
@@ -356,3 +356,11 @@ def game_battle(game_id):
         opponent_board=json.dumps(opponent_board),
         is_host=is_host
     )
+    
+    
+@app.route("/render_matrix", methods=["POST"])
+def render_matrix():
+    data = request.get_json()
+    matrix = data.get("matrix")
+    heatmap = data.get("heatmap", False)
+    return render_template("statistic/_stat_table.html", matrix=matrix, heatmap=heatmap)

@@ -1,6 +1,8 @@
 from app.ai.ai_interface import BaseAI
 from app.ai.test_ai import TestAI
 from app.ai.random_ai import RandomAI
+from app.ai.demo_prob_ai import DemoProbAI
+
 
 
 def get_ai_instance(game):
