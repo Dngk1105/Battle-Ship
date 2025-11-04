@@ -92,9 +92,10 @@ class DemoProbAI(BaseAI):
             for y in range(10):
                 if board[x][y] == 3:
                     prob_matrix = self.miss_update(prob_matrix, x, y)
-                elif board[x][y] in (2,4):
+                elif board[x][y] == 2:
                     prob_matrix = self.hit_update(prob_matrix, x, y)
-                    
+                elif board[x][y] == 4:
+                    prob_matrix = self.sunk_update(prob_matrix, self.game.player.playername, x, y)
         return prob_matrix
                 
                         
@@ -119,9 +120,18 @@ class DemoProbAI(BaseAI):
                 m[nx][ny] = np.round(m[nx][ny] * 1.5, 1)
                 
         return m
-
+    
+    def sunk_update(self, prob_matrix, target_name, x, y):
+        prob_matrix[x][y] = 0
+        getShip = self._get_ship_component(target_name, x, y)
+        ship_name, comps = getShip
+        for x, y in comps:
+            for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+                nx, ny = x + dx, y + dy
+                if self.in_bounds(nx, ny) and (x, y) not in comps:
+                    prob_matrix[nx][ny] = np.round(prob_matrix[nx][ny] * 0.8, 1)
         
-        
+        return prob_matrix
 
 
   
