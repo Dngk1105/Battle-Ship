@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import sqlalchemy as sa
 from app import db
@@ -10,7 +11,7 @@ class DemoProbAI(BaseAI):
     """
     def __init__(self, game, name=None):
         super().__init__(game, name)
-        self.prob_matrix = self.gen_prob_matrix() 
+        self.init_matrix = self.init_prob_matrix() 
 
     
     def place_ships(self):
@@ -24,16 +25,20 @@ class DemoProbAI(BaseAI):
             self.log_action(f"Không tìm thấy bảng của {target_name}")
             return {"result": "invalid", "x": -1, "y": -1}
         
+        prob_matrix = self.calc_prob_matrix(board)
+        # possible_moves = [(x, y) for x in range(10) for y in range(10)
+        #                   if board[x][y] not in (2, 3, 4)]
+        # x, y = random.choice(possible_moves)
+        
         #Tìm ô có xác xuất cao nhất trong phổ xác xuất
         best_val = -1e9
         best_x = best_y = -1
         for x in range(10):
             for y in range(10):
                 if board[x][y] in (2, 3, 4):
-                    self.prob_matrix[x][y] = 0
                     continue
-                if self.prob_matrix[x][y] > best_val:
-                    best_val = self.prob_matrix[x][y]
+                if prob_matrix[x][y] > best_val:
+                    best_val = prob_matrix[x][y]
                     best_x, best_y = x, y
 
         x, y = best_x, best_y 
@@ -44,35 +49,23 @@ class DemoProbAI(BaseAI):
         result_data.update({"x": x, "y": y})
         print(f"[DEBUG] {self.name} bắn vào ({x}, {y}) của {target_name}")
         db.session.commit()
-
-        #Xử lí sau khi bắn 
-        self.prob_matrix[x][y] = 0  #đã bắn
-        if result_data['result'] == 'miss':
-            self.log_action(f"Bắn hụt tại ({x},{y})")
-            self.miss_update(x, y)
-        elif result_data['result'] == 'hit':
-            self.log_action(f"Bắn trúng tại ({x},{y})")
-            self.hit_update(x, y)
-        elif result_data['result'] == 'sunk':
-            self.log_action(f"Đánh chìm tàu tại ({x},{y})")
-            self.hit_update(x, y)
         
+        board = self.get_board(target_name)
+        prob_matrix = self.calc_prob_matrix(board)
+        self.log_action("Cập nhật prob_matrix", prob_matrix = prob_matrix.tolist())
         
-        self.log_action(f"Cập nhật lại prob_matrix", 
-                        prob_matrix = self.prob_matrix.tolist())   #nhớ tolist() để json hóa được
         return result_data
 
         
                
-    def gen_prob_matrix(self):
+    def init_prob_matrix(self):
         """
-        Tạo ma trận phổ xác xuất
+        Tạo ma trận phổ xác xuất ban đầu
         Ma trận này sẽ được tính bằng cách kiểm tra khả năng đặt tàu vào mỗi ô
         Cụ thể hơn là nếu có thể đặt tàu Carrier(5) theo chiều dọc vào ô (1,0)
         thì các ô (1,0), (2,0), (3,0), (4,0), (5,0) sẽ được cộng thêm 1
         """
-        prob_matrix = np.zeros((10, 10), dtype=int)
-        
+        prob_matrix = np.zeros((10, 10), dtype=float)
         for lenght in self.ships.values():
             for orientation in ["H", "V"]:
                 for x in range(10):
@@ -92,21 +85,40 @@ class DemoProbAI(BaseAI):
                                 prob_matrix[nx][ny] += 1
                             
         return prob_matrix
+    
+    def calc_prob_matrix(self, board):
+        prob_matrix = np.copy(self.init_matrix)
+        for x in range(10):
+            for y in range(10):
+                if board[x][y] == 3:
+                    prob_matrix = self.miss_update(prob_matrix, x, y)
+                elif board[x][y] in (2,4):
+                    prob_matrix = self.hit_update(prob_matrix, x, y)
+                    
+        return prob_matrix
+                
                         
-    def miss_update(self, x, y):
+    def miss_update(self, prob_matrix, x, y,):
         # Giảm nhẹ xác suất vùng lân cận
-        for dx in [-1, 0, 1, -2, 2]:
-            for dy in [-1, 0, 1, -2, 2]:
-                nx, ny = x + dx, y + dy
-                if self.in_bounds(nx, ny):
-                    self.prob_matrix[nx][ny] *= 0.8  # giảm 20%
-                                        
-    def hit_update(self, x, y):
-        # Tăng xác suất cho các ô lân cận
+        m = prob_matrix
+        m[x][y] = -1
         for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
             nx, ny = x + dx, y + dy
             if self.in_bounds(nx, ny):
-                self.prob_matrix[nx][ny] *= 2.0  # tăng gấp đôi
+                m[nx][ny] = np.round(m[nx][ny] * 0.8, 1)
+                    
+        return m
+                                        
+    def hit_update(self, prob_matrix, x, y):
+        # Tăng xác suất cho các ô lân cận
+        m = prob_matrix
+        m[x][y] = 0
+        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+            nx, ny = x + dx, y + dy
+            if self.in_bounds(nx, ny):
+                m[nx][ny] = np.round(m[nx][ny] * 1.5, 1)
+                
+        return m
 
         
         

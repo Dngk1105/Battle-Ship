@@ -5,6 +5,7 @@ from flask_login import current_user
 from app.models import Game
 from app.game_logic.base_logic import GameLogic
 from app.ai.factory import get_ai_instance
+from time import sleep
 
 import threading
 import time
@@ -190,6 +191,7 @@ def handle_ai_make_shot(data):
     from app.socket_helpers import process_shot_result
     from app import db, socketio
 
+    sleep(0.25)
     game_id = data.get("game_id")
     game = db.session.get(Game, game_id)
     if not game or not game.ai:
@@ -199,6 +201,7 @@ def handle_ai_make_shot(data):
     print(f"[DEBUG] AI {ai.name} bắt đầu bắn...")
 
     # Gọi logic AI bắn
+
     result_data = ai.make_shot(
         attacker_name=game.ai.name,
         target_name=game.player.playername
