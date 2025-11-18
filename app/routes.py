@@ -302,8 +302,6 @@ def game_setup(game_id):
 
     # Nếu là AI đối thủ → tự động đặt tàu và sẵn sàng
     if game.ai and not logic.get_board(game.ai.name):
-        ai = get_ai_instance(game)
-        ai.place_ships()
         game.ai_ready = True
         db.session.commit()
 
@@ -327,6 +325,8 @@ def game_battle(game_id):
     # xác định đối thủ
     if game.ai:
         opponent_name = game.ai.name
+        ai = get_ai_instance(game)
+        ai.place_ships()
     elif is_host and game.opponent:
         opponent_name = game.opponent.playername
     elif not is_host:
