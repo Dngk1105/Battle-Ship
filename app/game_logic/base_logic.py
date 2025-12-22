@@ -4,6 +4,12 @@ from app.models import ShipPlacement, Player
 import sqlalchemy as sa
 import random
 
+# 0: ô trống
+# 1: ô có tàu
+# 2: bắn trúng
+# 3: bắng trượt 
+# 4: chìm
+
 class GameLogic:
     """
     Lớp xử lý toàn bộ logic của trò chơi Battleship.
@@ -149,6 +155,7 @@ class GameLogic:
             .where(ShipPlacement.game_id == self.game.id)
             .where(ShipPlacement.owner == owner)
         )
+        # nếu ship_data đã tồn tại thì cập nhật, chưa thì tạo mới
         if placement:
             data = json.loads(placement.ship_data or "{}")
             data[ship_name] = {
@@ -181,6 +188,7 @@ class GameLogic:
         return board
     
     def auto_place_ships(self, owner_name): 
+        """Tự động đặt tàu ngẫu nhiên"""
         board = self.init_board(owner_name) 
         for ship_name, length in self.ships.items(): 
             placed = False 
@@ -197,6 +205,7 @@ class GameLogic:
 
     # --------------------------- SHOOTING LOGIC ---------------------------
 
+    # kiểm tra phát bắn (tọa độ x, y)
     def shoot(self, attacker_name, target_name, x, y):
         """
         Xử lý phát bắn giữa 2 người (attacker → target)
@@ -260,7 +269,7 @@ class GameLogic:
             print(f"[DEBUG] +1 lượt bắn cho opponent {attacker_name}")
         elif attacker_name == getattr(self.game.ai, "name", None):
             self.game.opponent_shots += 1
-            print(f"[DEBUG] +1 lượt bắn cho opponent {attacker_name}")
+            print(f"[DEBUG] +1 lượt bắn cho AI {attacker_name}")
 
         db.session.commit()
 
