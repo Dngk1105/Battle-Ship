@@ -1,5 +1,7 @@
+import random
 from app import db
 from app.ai.ai_interface import BaseAI
+from app.models import AIState
 
 # 0: ô trống
 # 1: ô có tàu
@@ -14,11 +16,45 @@ class HuntAndTargetAI(BaseAI):
 
     dx = [-1, 1, 0, 0]
     dy = [0, 0, -1, 1]
+    # ================ INIT & STATE MANAGEMENT =================
+    def __init__(self, game, name="HuntAndTargetAI"):
+        super().__init__(game, name)
+        self.game_id = game.id
+        self.ai_name = name
+        self.state = self._load_state()
+    
+    def _load_state(self):
+        state_record = AIState.query.filter_by(
+            game_id = self.game_id,
+            ai_name = self.ai_name
+        ).first()
 
-    def __init__(self, name):
-        super().__init__(name)
-        self.current_hits = []   # state : lưu các ô đã bắn trúng nhưng chưa chìm tàu 
-        self.direction = None    # "H" | "V"
+        if state_record:
+            # nạp dữ liệu trạng thái của phát bắn cũ từ db
+            self.current_hits = state_record.current_hits or []
+            self.direction = state_record.direction
+        else:
+            # khởi tạo trạng thái mới nếu chưa có
+            self.current_hits = [] # danh sách các vị trí đã bắn trúng
+            self.direction = None 
+        
+       
+    def _save_state(self):
+        # Lưu trạng thái từ RAM xuống db
+        state_record = AIState.query.filter_by(
+            game_id = self.game_id,
+            ai_name = self.ai_name
+        ).first()
+        
+        if not state_record:
+            state_record = AIState(
+                game_id = self.game_id,
+                ai_name = self.ai_name
+            )
+            db.session.add(state_record)
+        
+        state_record.current_hits = self.current_hits
+        state_record.direction = self.direction
 
     # ================= PLACE SHIPS =================
     def place_ships(self):
@@ -36,21 +72,21 @@ class HuntAndTargetAI(BaseAI):
             return {"result": "no_move", "x": -1, "y": -1}
 
         # Best successor theo heuristic
-        best_score = -1e9
-        best_move = None
-        for move  in successors:
-            if move[2] > best_score:
-                best_score = move[2]
-                best_move = move
-                
-        x, y = best_move[0], best_move[1]
+        best_score = max(move[2] for move in successors)
+        best_moves = [move for move in successors if move[2] == best_score]
+                         
+        shoot = best_moves[0]
+        # shoot = random.choice(best_moves)  
+        x, y = shoot[0], shoot[1]
         
         result = self.shoot(attacker_name, target_name, x, y) # hit/miss/sunk dict
         self._update_state(result, x, y)
         
-        result["x"] = x, result["y"] = y
-
-        db.session.commit() # lưu kết quả bắn vào db
+        # cập nhật thêm thông tin tọa độ vào result
+        result["x"] = x
+        result["y"] = y
+        
+        self._save_state()  # lưu trạng thái AI sau mỗi phát bắn
         return result
 
     # ================= SUCCESSOR GENERATION =================
@@ -62,21 +98,19 @@ class HuntAndTargetAI(BaseAI):
 
         # ===== TARGET MODE =====
         if self.current_hits:
+            moves = []
             if self.direction:
                 # TH1: đã suy luận được hướng → ưu tiên bắn theo hướng đó
-                moves = self._directional_moves(board, value=100)
-                for move in moves:
-                    successors.append(move)
-            else:
-                # TH2: chưa suy luận được hướng → bắn các ô lân cận
-                moves = self._neighbor_moves(board, value=80)
-                for move in moves:
-                    successors.append(move)
+                moves.extend(self._directional_moves(board, value=100))
+            if not moves:
+                self.direction = None
+                # TH2: chưa suy luận được hướng → bắn xung quanh các hit hiện
+                moves.extend(self._neighbor_moves(board, value=80))
                     
-            if successors:
-                return successors
+            if moves:
+                return moves
 
-        # ===== HUNT MODE (PARITY) =====
+         # ===== HUNT MODE (PARITY) =====
         for x in range(10):
             for y in range(10):
                 if board[x][y] not in (2, 3, 4):
@@ -91,12 +125,15 @@ class HuntAndTargetAI(BaseAI):
     # ================= HEURISTIC MOVES =================
     def _neighbor_moves(self, board, value):
         moves = []
-        x, y = self.current_hits[0] # chỉ cần lấy hit đầu tiên 
-   
-        for i in range(4):
-            nx, ny = x + self.dx[i], y + self.dy[i]
-            if self._valid(board, nx, ny):
-                moves.append((nx, ny, value))
+        checked_moves = set()
+        
+        for (hx, hy) in self.current_hits:
+            for i in range(4):
+                x = hx + self.dx[i]
+                y = hy + self.dy[i]
+                if self._valid(board, x, y) and (x, y) not in checked_moves:
+                    moves.append((x, y, value))
+                    checked_moves.add((x, y))
 
         return moves
 
@@ -122,22 +159,32 @@ class HuntAndTargetAI(BaseAI):
     # ================= STATE UPDATE =================
     def _update_state(self, result, x, y):
         if result["result"] == "hit":
-            self.current_hits.append((x, y))
+            self.current_hits.append((x, y)) # thêm vị trí trúng vào danh sách
             if len(self.current_hits) >= 2:
-                # lấy ra 2 hit trúng đầu tiên
-                x1, y1 = self.current_hits[0]
-                x2 , y2 = self.current_hits[1]
-                
-                if x1 == x2:
-                    self.direction = "H"
-                elif y1 == y2:
-                    self.direction = "V"
+               new_direction = self._detect_direction(x, y)
+               if new_direction:
+                   self.direction = new_direction
 
         elif result["result"] == "sunk":
-            # local maximum reached → restart
-            self.current_hits.clear()
+            sunk_cells = result.get("comp", [])
+            
+            if not sunk_cells:
+                self.current_hits.clear()
+                self.direction = None
+                return
+            
+            self.current_hits = [h for h in self.current_hits if h not in sunk_cells]
             self.direction = None
 
+    def _detect_direction(self, current_x, current_y):
+        # so sánh hit mới nhất với các hit cũ trong current_hits để xem có tạo thành 1 hướng hay không
+        for (hx, hy) in reversed(self.current_hits[:-1]):
+            if hx == current_x and abs(hy - current_y) == 1:
+                return "H"
+            if hy == current_y and abs(hx - current_x) == 1:
+                return "V"
+        return self.direction
+     
     # ================= UTIL =================
     def _valid(self, board, x, y):
         return (
