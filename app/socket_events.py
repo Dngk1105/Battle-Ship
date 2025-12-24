@@ -208,6 +208,6 @@ def handle_ai_make_shot(data):
         attacker_name=game.ai.name,
         target_name=game.player.playername
     )
-    db.session.commit()
+    db.session.commit() # Lưu kết quả bắn vào db
 
     process_shot_result(game, result_data, game.ai.name, game.player.playername)
