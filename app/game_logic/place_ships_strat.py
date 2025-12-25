@@ -131,3 +131,22 @@ class ShipPlacementStrategy(GameLogic):
                     return False
                 
         return True
+    
+    def can_place_avoid_center(self, board, x, y, length, orientation):
+        """ Tránh đặt tàu ở giữa bảng """
+        invalid = {3, 4, 5, 6}
+        size = len(board)
+        
+        if orientation == "V":
+            for row in range(x, x + length):
+                if y in invalid:
+                    return False
+        else:  # "H"
+            for col in range(y, y + length):
+                if x in invalid:
+                    return False
+        if not self.can_place(board, x, y, length, orientation):
+            return False
+
+        return True
+        
