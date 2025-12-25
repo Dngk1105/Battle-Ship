@@ -7,7 +7,6 @@
   <div>
     <h3>Bảng của bạn</h3>
     <table id="playerBoard"></table>
-    <p id="status"></p>
   </div>
 
   <div>
@@ -19,19 +18,12 @@
     <h3> Hoạt động của AI</h3>
     <div id="aiLogs" style="height:200px;overflow-y:auto;border:1px solid gray;padding:5px;background:#fafafa;"></div>
     
-    <!-- Thanh điều chỉnh tốc độ AI -->
-    <div style="margin-top: 10px; padding: 5px; background: #eee; border-radius: 5px;">
-      <label for="aiDelayRange">Tốc độ AI: <span id="aiDelayVal">-1.0</span>s</label>
-      <br>
-      <input type="range" id="aiDelayRange" min="0" max="3" step="0.1" value="1.0" style="width: 100%;">
-    </div>
-
     <h4 id="aiBoardTitle"></h4>
     <div id="aiBoard"></div>
   </div>
 </div>
 
-
+<p id="status"></p>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
@@ -203,145 +195,6 @@ socket.on("turn_change", (data) => {
     }
 });
 
-function renderProbMatrix(aiName, matrix) {
-  if (!matrix) return;
-
-  fetch("/render_matrix", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      matrix: matrix,
-      heatmap: true
-    })
-  })
-  .then(res => res.text()) // chuyển phản hồi thành text HTML
-  .then(html => {
-    // Gắn bảng vào giao diện
-    document.getElementById("aiBoardTitle").textContent = `${aiName}'s Board`;
-    document.getElementById("aiBoard").innerHTML = html;
-
-    const tdList = document.querySelectorAll('#aiBoard td[data-alpha]');
-    const alphas = Array.from(tdList).map(td => parseFloat(td.dataset.alpha));
-
-    // Loại bỏ ô 0 khi tính min/max
-    const nonZero = alphas.filter(a => a > 0);
-    const minA = Math.min(...nonZero);
-    const maxA = Math.max(...nonZero);
-    const range = Math.max(maxA - minA, 1e-6); // tránh chia cho 0
-
-    tdList.forEach(td => {
-      const a = parseFloat(td.dataset.alpha);
-
-      if (a < 0) {
-        td.style.backgroundColor = "rgb(150, 200, 255)"; // trượt - xanh nhạt
-      } else if (a === 0) {
-        td.style.backgroundColor = "rgba(200, 0, 40, 1)"; // trúng - đỏ đậm
-        td.style.color = "white";
-      } else if (a > 0) {
-        // Gradient cho xác suất
-        const norm = (a - minA) / range;
-        const r = 255;
-        const g = Math.round(220 * (1 - norm));
-        const b = Math.round(220 * (1 - norm));
-        td.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-        td.style.color = norm > 0.6 ? "white" : "black";
-      } else {
-        td.style.backgroundColor = "white";
-      }
-
-      td.textContent = a.toFixed(1);
-    });
-  })
-  .catch(err => console.error("Render matrix error:", err));
-}
-
-function renderHuntTargetSuccessors(aiName, successors) {
-  if (!successors) return;
-
-  // Tạo ma trận 10x10 từ danh sách successors
-  let matrix = Array(10).fill().map(() => Array(10).fill(0));
-  successors.forEach(item => {
-    // item dạng [x, y, score]
-    const x = item[0];
-    const y = item[1];
-    const score = item[2];
-    if (x >= 0 && x < 10 && y >= 0 && y < 10) {
-        matrix[x][y] = score;
-    }
-  });
-
-  fetch("/render_matrix", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      matrix: matrix,
-      heatmap: true
-    })
-  })
-  .then(res => res.text())
-  .then(html => {
-    document.getElementById("aiBoardTitle").textContent = `${aiName}'s Logic`;
-    document.getElementById("aiBoard").innerHTML = html;
-
-    const tdList = document.querySelectorAll('#aiBoard td[data-alpha]');
-    
-    tdList.forEach(td => {
-      // Thiết lập kích thước tối thiểu cho ô
-      td.style.minWidth = "20px";
-      td.style.height = "20px";
-      td.style.textAlign = "center";
-
-      const val = parseFloat(td.dataset.alpha);
-      
-      // Reset style
-      td.style.color = "black";
-      td.textContent = "";
-      td.style.backgroundColor = "white";
-
-      if (val === 100) {
-         td.style.backgroundColor = "rgba(220, 20, 60, 0.9)"; // Đỏ đậm - Target Direction
-         td.style.color = "white";
-         td.textContent = val;
-      } else if (val === 80) {
-         td.style.backgroundColor = "rgba(255, 140, 0, 0.8)"; // Cam - Target Neighbor
-         td.textContent = val;
-      } else if (val === 10) {
-         td.style.backgroundColor = "rgba(50, 205, 50, 0.6)"; // Xanh lá - Hunt Parity
-         td.style.color = "white";
-         td.textContent = val;
-      } else if (val === 1) {
-         td.style.backgroundColor = "rgba(152, 251, 152, 0.4)"; // Xanh nhạt - Hunt Fill
-      } else {
-         td.style.backgroundColor = "white";
-      }
-    });
-  })
-  .catch(err => console.error("Render HuntTarget error:", err));
-}
-
-function highlightAICell(x, y, type) {
-  // Tìm ô trong bảng AI (giả sử bảng đã được render bởi renderHuntTargetSuccessors)
-  // Vì bảng render từ server không có data-x, data-y, ta tính theo index: index = x * 10 + y
-  const tdList = document.querySelectorAll('#aiBoard td');
-  const index = x * 10 + y;
-  
-  if (tdList[index]) {
-    const td = tdList[index];
-    td.style.transition = "background-color 0.3s"; // Thêm hiệu ứng chuyển màu
-    
-    if (type === "selected") {
-        td.style.backgroundColor = "yellow"; // Màu báo hiệu đang chọn
-        td.style.border = "2px solid blue";
-    } else if (type === "hit" || type === "sunk") {
-        td.style.backgroundColor = "red";
-        td.style.border = "1px solid black";
-    } else if (type === "miss") {
-        td.style.backgroundColor = "gray";
-        td.style.border = "1px solid black";
-    }
-  }
-}
-
 socket.on("ai_log_update", (data) => {
   console.log("prob_matrix:", data.prob_matrix);
   //Cập nhật log
@@ -353,27 +206,57 @@ socket.on("ai_log_update", (data) => {
 
   // Cập nhật thêm (nếu có)
   if (data.ai_name === "DemoProbAI") {
-    renderProbMatrix(data.ai_name, data.prob_matrix);
-  } else if (data.ai_name === "HuntAndTargetAI") {
-    renderHuntTargetSuccessors(data.ai_name, data.successors);
-    
-    if (data.selected_move) {
-        highlightAICell(data.selected_move[0], data.selected_move[1], "selected");
-    }
-    if (data.shot_result) {
-        highlightAICell(data.shot_result.x, data.shot_result.y, data.shot_result.result);
+    if (data.prob_matrix) {
+      fetch("/render_matrix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matrix: data.prob_matrix,
+          heatmap: true
+        })
+      })
+      .then(res => res.text()) // chuyển phản hồi thành text HTML
+      .then(html => {
+        // Gắn bảng vào giao diện
+        document.getElementById("aiBoardTitle").textContent = `${data.ai_name}'s Board`;
+        document.getElementById("aiBoard").innerHTML = html;
+
+        const tdList = document.querySelectorAll('#aiBoard td[data-alpha]');
+        const alphas = Array.from(tdList).map(td => parseFloat(td.dataset.alpha));
+
+        // Loại bỏ ô 0 khi tính min/max
+        const nonZero = alphas.filter(a => a > 0);
+        const minA = Math.min(...nonZero);
+        const maxA = Math.max(...nonZero);
+        const range = Math.max(maxA - minA, 1e-6); // tránh chia cho 0
+
+        tdList.forEach(td => {
+          const a = parseFloat(td.dataset.alpha);
+
+          if (a < 0) {
+            td.style.backgroundColor = "rgb(150, 200, 255)"; // trượt - xanh nhạt
+          } else if (a === 0) {
+            td.style.backgroundColor = "rgba(200, 0, 40, 1)"; // trúng - đỏ đậm
+            td.style.color = "white";
+          } else if (a > 0) {
+            // Gradient cho xác suất
+            const norm = (a - minA) / range;
+            const r = 255;
+            const g = Math.round(220 * (1 - norm));
+            const b = Math.round(220 * (1 - norm));
+            td.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            td.style.color = norm > 0.6 ? "white" : "black";
+          } else {
+            td.style.backgroundColor = "white";
+          }
+
+          td.textContent = a.toFixed(1);
+        });
+      })
+      .catch(err => console.error("Render matrix error:", err));
     }
   }
 });
-
-// Xử lý thanh trượt tốc độ AI
-const delaySlider = document.getElementById("aiDelayRange");
-const delayVal = document.getElementById("aiDelayVal");
-
-delaySlider.addEventListener("change", (e) => {
-    const val = e.target.value;
-    delayVal.textContent = -1 * val;
-    socket.emit("update_ai_delay", { game_id: gameId, delay: val });
-});
 </script>
 {% endblock %}
+
