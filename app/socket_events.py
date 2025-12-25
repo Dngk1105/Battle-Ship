@@ -208,17 +208,6 @@ def handle_ai_make_shot(data):
         attacker_name=game.ai.name,
         target_name=game.player.playername
     )
-    db.session.commit() # Lưu kết quả bắn vào db
+    db.session.commit()
 
     process_shot_result(game, result_data, game.ai.name, game.player.playername)
-
-
-@socketio.on("update_ai_delay")
-def handle_update_ai_delay(data):
-    game_id = data.get("game_id")
-    delay_val = float(data.get("delay", 1.0))
-    
-    game = db.session.get(Game, game_id)
-    if game:
-        game.ai_delay = delay_val
-        db.session.commit()
