@@ -1,5 +1,5 @@
 import random
-from app import db
+from app import db, socketio
 from app.ai.ai_interface import BaseAI
 from app.models import AIState
 
@@ -70,18 +70,25 @@ class HuntAndTargetAI(BaseAI):
         successors = self._generate_successors(board)
         if not successors:
             return {"result": "no_move", "x": -1, "y": -1}
+        self.log_action("Cập nhật các ô có thể bắn", successors = successors)
+        socketio.sleep(1)
 
         # Best successor theo heuristic
         best_score = max(move[2] for move in successors)
         best_moves = [move for move in successors if move[2] == best_score]
                          
-        shoot = best_moves[0]
-        # shoot = random.choice(best_moves)  
+        shoot = random.choice(best_moves) #Chọn ngẫu nhiên trong các ô tốt nhất (Parity ngẫu nhiên)
         x, y = shoot[0], shoot[1]
         
+        self.log_action(f"Quyết định bắn tại ({x}, {y})", selected_move=[x, y])
+        socketio.sleep(1)
+
         result = self.shoot(attacker_name, target_name, x, y) # hit/miss/sunk dict
         self._update_state(result, x, y)
         
+        self.log_action(f"Kết quả tại ({x}, {y}): {result['result']}", shot_result={"x": x, "y": y, "result": result['result']})
+        socketio.sleep(1)
+
         # cập nhật thêm thông tin tọa độ vào result
         result["x"] = x
         result["y"] = y
