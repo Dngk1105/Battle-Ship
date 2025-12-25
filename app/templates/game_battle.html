@@ -7,6 +7,7 @@
   <div>
     <h3>Bảng của bạn</h3>
     <table id="playerBoard"></table>
+    <p id="status"></p>
   </div>
 
   <div>
@@ -18,12 +19,19 @@
     <h3> Hoạt động của AI</h3>
     <div id="aiLogs" style="height:200px;overflow-y:auto;border:1px solid gray;padding:5px;background:#fafafa;"></div>
     
+    <!-- Thanh điều chỉnh tốc độ AI -->
+    <div style="margin-top: 10px; padding: 5px; background: #eee; border-radius: 5px;">
+      <label for="aiDelayRange">Tốc độ AI: <span id="aiDelayVal">-1.0</span>s</label>
+      <br>
+      <input type="range" id="aiDelayRange" min="0" max="3" step="0.1" value="1.0" style="width: 100%;">
+    </div>
+
     <h4 id="aiBoardTitle"></h4>
     <div id="aiBoard"></div>
   </div>
 </div>
 
-<p id="status"></p>
+
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
@@ -279,8 +287,8 @@ function renderHuntTargetSuccessors(aiName, successors) {
     
     tdList.forEach(td => {
       // Thiết lập kích thước tối thiểu cho ô
-      td.style.minWidth = "30px";
-      td.style.height = "30px";
+      td.style.minWidth = "20px";
+      td.style.height = "20px";
       td.style.textAlign = "center";
 
       const val = parseFloat(td.dataset.alpha);
@@ -356,6 +364,16 @@ socket.on("ai_log_update", (data) => {
         highlightAICell(data.shot_result.x, data.shot_result.y, data.shot_result.result);
     }
   }
+});
+
+// Xử lý thanh trượt tốc độ AI
+const delaySlider = document.getElementById("aiDelayRange");
+const delayVal = document.getElementById("aiDelayVal");
+
+delaySlider.addEventListener("change", (e) => {
+    const val = e.target.value;
+    delayVal.textContent = -1 * val;
+    socket.emit("update_ai_delay", { game_id: gameId, delay: val });
 });
 </script>
 {% endblock %}

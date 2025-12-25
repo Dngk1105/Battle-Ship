@@ -173,6 +173,7 @@ class Game(db.Model):
     player_ready: so.Mapped[bool] = so.mapped_column(default=False)
     opponent_ready: so.Mapped[bool] = so.mapped_column(default=False)
     ai_ready: so.Mapped[bool] = so.mapped_column(default=False)
+    ai_delay: so.Mapped[Optional[float]] = so.mapped_column(default=1.0) # Tốc độ AI (giây)
 
 
 
@@ -220,4 +221,3 @@ class ShipPlacement(db.Model):
     #backref là ánh xạ ngược từ Game->ShipPlacement qua game.ship_placements
     game: so.Mapped["Game"] = so.relationship(backref="ship_placements")   
     
-
