@@ -140,6 +140,22 @@ class AI(db.Model):
     def __repr__(self):
         return f"<AI {self.name}>"
     
+#Lưu trạng thái phát bắn của AI giữa các lượt
+class AIState(db.Model):
+    # tạo bảng riêng cho trạng thái AI
+    __tablename__ = "ai_states"
+    id = db.Column(db.Integer, primary_key = True)
+    game_id = db.Column(db.Integer, db.ForeignKey('game.id'), nullable=False)
+    ai_name = db.Column(db.String(50), nullable=False)
+    current_hits = db.Column(db.JSON, default=list)
+    direction = db.Column(db.String(1), nullable=True)  # "H" | "V" | None
+    
+    __table_args__ = (
+        db.UniqueConstraint("game_id", "ai_name"),
+    )
+    
+    def __repr__(self):
+        return f"<AIState game_id={self.game_id} ai_name={self.ai_name} hits={self.current_hits} direction={self.direction}>"
     
 # Lưu thông tin 1 trận đấu
 class Game(db.Model):
@@ -157,6 +173,7 @@ class Game(db.Model):
     player_ready: so.Mapped[bool] = so.mapped_column(default=False)
     opponent_ready: so.Mapped[bool] = so.mapped_column(default=False)
     ai_ready: so.Mapped[bool] = so.mapped_column(default=False)
+    ai_delay: so.Mapped[Optional[float]] = so.mapped_column(default=1.0) # Tốc độ AI (giây)
 
 
 
@@ -204,4 +221,3 @@ class ShipPlacement(db.Model):
     #backref là ánh xạ ngược từ Game->ShipPlacement qua game.ship_placements
     game: so.Mapped["Game"] = so.relationship(backref="ship_placements")   
     
-

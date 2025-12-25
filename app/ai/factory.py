@@ -3,7 +3,7 @@ from app.ai.test_ai import TestAI
 from app.ai.random_ai import RandomAI
 from app.ai.demo_prob_ai import DemoProbAI
 from app.ai.prob_ai import ProbAI
-
+from app.ai.hunt_and_target_ai import HuntAndTargetAI
 
 
 def get_ai_instance(game):
