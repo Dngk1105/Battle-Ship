@@ -63,6 +63,24 @@ class ShipPlacementStrategy(GameLogic):
         return board
     
     #----------------------------------------------------------------------------------------------
+    
+    def strategy_avoid_center(self, board, ship_name, length, owner):
+        """Ưu tiên đặt ở góc (Tránh các ô ở giữa)"""
+        placed = False
+        attempts = 0
+        max_attempts = 100
+        while not placed and attempts < max_attempts:
+            attempts += 1
+            orientation = random.choice(["H", "V"])
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
+            if self.can_place_avoid_center(board, x, y, length, orientation):
+                board = self.place_ship(board, x, y, length, orientation, ship_name, owner)
+                placed = True
+        
+        if not placed:
+            board = self.strategy_random(board, ship_name, length, owner)
+        return board
    
     # def strategy_cluster(self, board, ship_name, length, owner):
     #     """Xếp tàu theo từng cụm"""
@@ -78,7 +96,8 @@ class ShipPlacementStrategy(GameLogic):
         strat_map = {
             "random": self.strategy_random,
             "avoid mid and corner": self.strategy_avoid_mid_corner,
-            "avoid adjacent": self.strategy_avoid_adjacent
+            "avoid adjacent": self.strategy_avoid_adjacent,
+            "avoid center": self.strategy_avoid_center
         }
 
         strat_func = strat_map.get(strategy, self.strategy_random)

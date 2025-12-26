@@ -1,4 +1,5 @@
-import numpy
+import numpy as np  
+import json
 import random
 from app import db
 from app.models import Player, ShipPlacement
@@ -12,21 +13,11 @@ class ProbAI(BaseAI):
     
     def __init__(self, game, name = None):
         super().__init__(game, name)
+
             
     def place_ships(self):
         """ Ưu tiên đặt ở góc (Tránh các ô ở giữa) """
-        board = self.init_board(self.name)
-        for ship_name, lenght in self.ships.items():
-            placed = False
-            while not placed:
-                attempts += 1
-                orientation = random.choice(["H", "V"])
-                x = random.randint(0, 9)
-                y = random.randint(0, 9)
-                if self.can_place_avoid_center(board, x, y, lenght, orientation):
-                    board = self.place_ship(board, x, y, lenght, orientation, ship_name, self.name)
-                    placed = True
-            self.save_board(self.name, board)
+        board = self.auto_place_ships_strategy(self.name, strategy="avoid center")
         return board
     
     def make_shot(self, attacker_name, target_name):
@@ -36,9 +27,85 @@ class ProbAI(BaseAI):
             return {"result": "invalid", "x": -1, "y": -1}
         
         ships_alive = self.get_ships_alive(target_name)
+        self.log_action(f"Tàu còn sống: {ships_alive}")
         
+        prob_matrix = np.zeros((10, 10), dtype= int)
         
+        hits = [] #lưu vị trí có hit
+        for x in range(0, 9):
+            for y in range(0, 9):
+                if board[x][y] == 2:
+                    hits.append((x,y))
+        if hits:
+            self.log_action(f"Tìm thấy phát bắn trúng -> Target Mode")
+        else:
+            self.log_action(f"Không tìm thấy phát bắn trúng -> Hunt Mode")
+        
+        # Tính toán hàm mật độ
+        for ship_name, lenght in ships_alive:
+            prob_matrix += self.cacl_prob_matrix(board, lenght, hits)
+        self.log_action("Cập nhật prob_matrix", prob_matrix = prob_matrix.tolist())
+        
+        # Xem xét lựa chọn phát bắn
+        possible_move = []
+        best_val = -1e9
+        for x in range(10):
+            for y in range(10):
+                if prob_matrix[x][y] > best_val:
+                    best_val = prob_matrix[x][y]
+                    possible_move.clear()
+                    possible_move.append((x, y))
+                elif prob_matrix[x][y] == best_val:
+                    possible_move.append((x, y))
+
+        choice = random.choice(possible_move)
+        x, y = choice
+        
+        result_data = self.shoot(attacker_name, target_name, x, y)
+        result_data.update({"x": x, "y": y})
+        db.session.commit()
+        return result_data
+
     
+#-------------------------------------------------------------------------------------------------------
+    
+    def cacl_prob_matrix(self, board, lenght, hits = []):
+        """
+        Tính toán phổ mật độ xác xuất
+        """
+        prob_matrix = np.zeros((10, 10), dtype= int)
+       
+        target_mode = True if hits else False
+        for x in range(10):
+            for y in range(10):
+                for orientation in ["H", "V"]:
+                    valid = True
+                    cells = []
+                    hit_overlap = False
+                    
+                    for i in range(lenght):
+                        nx = x + (i if orientation == "V" else 0)
+                        ny = y + (i if orientation == "H" else 0)
+                        if not self.in_bounds(nx, ny):
+                            valid = False
+                            break
+                        if board[nx][ny] in [3, 4]:
+                            valid = False
+                            break
+                        if board[nx][ny] == 2:
+                            hit_overlap = True
+                        cells.append((nx, ny))
+                    
+                    if valid:
+                        if target_mode and not hit_overlap:
+                            continue
+                        for (nx, ny) in cells:
+                            if board[nx][ny] == 2:
+                                prob_matrix[nx][ny] = -1
+                            else: 
+                                prob_matrix[nx][ny] += 1
+        return prob_matrix
+              
 
     def get_ships_alive(self, owner_name):
         """
@@ -50,5 +117,14 @@ class ProbAI(BaseAI):
             .where(ShipPlacement.owner == owner_name)
         )
         
+        data = json.loads(placement.ship_data)
+        ships_alive = []
+        for ship_name, lenght in self.ships.items():
+            if not data[ship_name]["sunked"]:
+                ships_alive.append((ship_name, lenght))
+        
+        return ships_alive
+            
 
-
+    
+        

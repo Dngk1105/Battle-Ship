@@ -354,6 +354,8 @@ socket.on("ai_log_update", (data) => {
   // Cập nhật thêm (nếu có)
   if (data.ai_name === "DemoProbAI") {
     renderProbMatrix(data.ai_name, data.prob_matrix);
+  } else if (data.ai_name === "ProbAI"){
+    renderProbMatrix(data.ai_name, data.prob_matrix);
   } else if (data.ai_name === "HuntAndTargetAI") {
     renderHuntTargetSuccessors(data.ai_name, data.successors);
     

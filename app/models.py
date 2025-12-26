@@ -214,7 +214,7 @@ class ShipPlacement(db.Model):
     game_id: so.Mapped[int] = so.mapped_column(db.ForeignKey("game.id"))
     owner: so.Mapped[str] = so.mapped_column(db.String(16))  
     grid_data: so.Mapped[str] = so.mapped_column(db.Text)    
-    ship_data: so.Mapped[Optional[str]] = so.mapped_column(db.Text, nullable=True)
+    ship_data: so.Mapped[Optional[str]] = so.mapped_column(db.Text, nullable=True) #{ship_name: {"positions": [], "sunked":}} 
     shot_data: so.Mapped[Optional[str]] = so.mapped_column(db.Text, nullable=True)
     
     # Quan hệ đến game
