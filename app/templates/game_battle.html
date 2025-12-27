@@ -235,8 +235,8 @@ function renderProbMatrix(aiName, matrix) {
       const cell = document.createElement("td");
       const a = matrix[i][j];
       
-      cell.style.width = "30px";
-      cell.style.height = "30px";
+      cell.style.width = "35px";
+      cell.style.height = "35px";
       cell.style.border = "0.1px solid #ccc";
       cell.style.textAlign = "center";
       cell.style.fontSize = "12px";
@@ -292,15 +292,15 @@ function renderHuntTargetSuccessors(aiName, successors) {
       const cell = document.createElement("td");
       const val = matrix[i][j];
 
-      cell.style.minWidth = "20px";
-      cell.style.height = "20px";
+      cell.style.minWidth = "35px";
+      cell.style.height = "35px";
       cell.style.textAlign = "center";
       cell.style.border = "1px solid #eee";
       cell.style.color = "black";
       cell.style.backgroundColor = "white";
 
       if (val === 100) {
-         cell.style.backgroundColor = "rgba(220, 20, 60, 0.9)"; // Đỏ đậm - Target Direction
+         cell.style.backgroundColor = "rgba(227, 74, 104, 0.9)"; // Đỏ đậm - Target Direction
          cell.style.color = "white";
          cell.textContent = val;
       } else if (val === 80) {
@@ -344,6 +344,8 @@ function highlightAICell(x, y, type) {
             td.style.color = "black"
             break;
         case "hit":
+            td.style.backgroundColor = "red";
+            break;
         case "sunk":
             td.style.backgroundColor = "crimson";
             td.style.color = "white";
