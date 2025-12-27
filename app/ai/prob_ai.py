@@ -43,10 +43,11 @@ class ProbAI(BaseAI):
         
         # Tính toán hàm mật độ
         for ship_name, lenght in ships_alive:
+            self.log_action(f"Tính toán phổ mật độ cho tàu {ship_name}({lenght})", delay= self.delay*2)
             prob_matrix += self.cacl_prob_matrix(board, lenght, hits)
-        self.log_action("Cập nhật prob_matrix", prob_matrix = prob_matrix.tolist())
+            self.log_action(f"Đã xong, cập nhật phổ", prob_matrix = prob_matrix.tolist())
         
-        # Xem xét lựa chọn phát bắn
+        self.log_action(f"Xem xét phổ để lựa chọn phát bắn", delay= self.delay)
         possible_move = []
         best_val = -1e9
         for x in range(10):
@@ -57,13 +58,18 @@ class ProbAI(BaseAI):
                     possible_move.append((x, y))
                 elif prob_matrix[x][y] == best_val:
                     possible_move.append((x, y))
+        self.log_action(f"Danh sách ô có thể bắn: {possible_move}", delay = self.delay / 2, possible_moves=possible_move)
+
 
         choice = random.choice(possible_move)
         x, y = choice
+        self.log_action(f"Quyết định bắn tại ({x}, {y})", delay=self.delay, selected_move=[x, y])
+
         
         result_data = self.shoot(attacker_name, target_name, x, y)
         result_data.update({"x": x, "y": y})
         db.session.commit()
+        self.log_action(f"Kết quả tại ({x}, {y}): {result_data['result']}", delay=self.delay, shot_result={"x": x, "y": y, "result": result_data['result']})
         return result_data
 
     
